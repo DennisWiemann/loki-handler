@@ -1,0 +1,28 @@
+{
+    "name": "denniswiemann/loki-handler",
+    "description": "MonologHandler thats sends Logs to Loki",
+    "type": "library",
+    "require": {
+        "monolog/monolog": "^3.8",
+        "symfony/dependency-injection": "^6.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12",
+        "friendsofphp/php-cs-fixer": "^3.9",
+        "phpstan/phpstan": "^2.1",
+        "rector/rector": "^2.0",
+        "phpmd/phpmd": "^2.15",
+        "phploc/phploc": "^2.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "DennisWiemann\\LokiHandler\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dennis Wiemann"
+        }
+    ]
+}
