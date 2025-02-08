@@ -8,12 +8,25 @@ use Monolog\Formatter\FormatterInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\AbstractHandler;
 use Monolog\Handler\Curl;
+use Monolog\Handler\FormattableHandlerInterface;
 use Monolog\Handler\MissingExtensionException;
 use Monolog\LogRecord;
 use RuntimeException;
 
-class LokiHandler extends AbstractHandler
+class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
 {
+    private FormatterInterface $formatter;
+
+    public function setFormatter(FormatterInterface $formatter): self
+    {
+        $this->formatter = $formatter;
+        return $this;
+    }
+
+    public function getFormatter(): FormatterInterface
+    {
+        return $this->formatter ?? $this->getDefaultFormatter();
+    }
 
     public function __construct( private  string $lokiUrl)
     {
@@ -39,7 +52,7 @@ class LokiHandler extends AbstractHandler
 
     function write(LogRecord $record): void
     {
-        $message = $this->getDefaultFormatter()->format($record); // TODO: json format
+        $message = $this->getFormatter()->format($record); 
         $labels = $record->extra['labels'] ?? [];
         $timestamp = $record->datetime->getTimestamp() * 1000000000;
         $this->send($timestamp, $message, $labels);

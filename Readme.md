@@ -2,7 +2,7 @@
 
 ## Installation
 ```bash
-composer config repositories.lokihandler vcs https://github.com/foo/bar
+composer config repositories.lokihandler vcs git@github.com:DennisWiemann/loki-handler.git
 composer require denniswiemann/loki-handler
 ```
 ## Usage
