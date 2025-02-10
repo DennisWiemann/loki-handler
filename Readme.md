@@ -21,15 +21,23 @@ monolog:
             handler: loki
         loki:
             type: service
-            id: DennisWiemann\Handler\LokiHandler
+            id: DennisWiemann\LokiHandler\Handler\LokiHandler
 ```
 ## Usage
 ### Using the LabelProcessor
 ```yaml
 services:
-    DennisWiemann\Processor\LabelProcessor: 
+    DennisWiemann\LokiHandler\Handler\LokiHandler: 
+        arguments:
+            $lokiUrl: 'http://grafana-loki:3100'
+            $level: 'error'
+    
+    DennisWiemann\LokiHandler\Processor\LabelProcessor: 
+        arguments:
+            $serviceName: 'pimcore-loki-handler-1'
         tags:
             - { name: monolog.processor }
+
 ```
 ## Open
 - [x] Quality Tools
