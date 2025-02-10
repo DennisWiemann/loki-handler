@@ -31,3 +31,7 @@ services:
         tags:
             - { name: monolog.processor }
 ```
+## Open
+- [x] Quality Tools
+- [ ] CI
+- [ ] Unit Tests
