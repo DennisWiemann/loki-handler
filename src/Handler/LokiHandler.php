@@ -9,6 +9,7 @@ use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\AbstractHandler;
 use Monolog\Handler\FormattableHandlerInterface;
 use Monolog\Handler\MissingExtensionException;
+use Monolog\Level;
 use Monolog\LogRecord;
 use RuntimeException;
 
@@ -28,11 +29,15 @@ class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
         return $this->formatter ?? $this->getDefaultFormatter();
     }
 
-    public function __construct(private string $lokiUrl)
-    {
+    public function __construct(
+        private string $lokiUrl,
+        int|string|Level $level = Level::Debug,
+        bool $bubble = true
+    ) {
         if (!\extension_loaded('curl')) {
             throw new MissingExtensionException('The curl extension is needed to use the LokiHandler');
         }
+        parent::__construct($level, $bubble);
     }
 
     public function handle(LogRecord $record): bool
