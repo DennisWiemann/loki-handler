@@ -1,6 +1,9 @@
 # composer files
 vendor
 
+# php-cs-fixer
+.php-cs-fixer.cache
+
 # IDE files
 .idea
 .vscode

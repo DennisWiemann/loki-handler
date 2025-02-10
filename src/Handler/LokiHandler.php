@@ -7,7 +7,6 @@ namespace DennisWiemann\LokiHandler\Handler;
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\AbstractHandler;
-use Monolog\Handler\Curl;
 use Monolog\Handler\FormattableHandlerInterface;
 use Monolog\Handler\MissingExtensionException;
 use Monolog\LogRecord;
@@ -20,6 +19,7 @@ class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
     public function setFormatter(FormatterInterface $formatter): self
     {
         $this->formatter = $formatter;
+
         return $this;
     }
 
@@ -28,17 +28,13 @@ class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
         return $this->formatter ?? $this->getDefaultFormatter();
     }
 
-    public function __construct( private  string $lokiUrl)
+    public function __construct(private string $lokiUrl)
     {
         if (!\extension_loaded('curl')) {
             throw new MissingExtensionException('The curl extension is needed to use the LokiHandler');
         }
     }
 
-
-    /**
-     * @inheritDoc
-     */
     public function handle(LogRecord $record): bool
     {
         if (!$this->isHandling($record)) {
@@ -50,19 +46,24 @@ class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
         return true; // todo: check if we need to return false
     }
 
-    function write(LogRecord $record): void
+    public function write(LogRecord $record): void
     {
-        $message = $this->getFormatter()->format($record); 
+        /** @var string $message */
+        $message = $message = $this->getFormatter()->format($record);
+        /** @var array<string, string> $labels */
         $labels = $record->extra['labels'] ?? [];
         $timestamp = $record->datetime->getTimestamp() * 1000000000;
         $this->send($timestamp, $message, $labels);
     }
 
-    private function send(int $timestamp, string $message, array $labels)
+    /**
+     * @param array<string,string> $labels
+     */
+    private function send(int $timestamp, string $message, array $labels): void
     {
-        $ch = curl_init();
+        $curlSession = curl_init();
         $url = $this->lokiUrl . '/loki/api/v1/push';
-        $data = array(
+        $data = [
             'streams' => [
                 [
                     'stream' => $labels,
@@ -71,37 +72,43 @@ class LokiHandler extends AbstractHandler implements FormattableHandlerInterface
                     ]
                 ]
             ]
-        );
-        $data_string = json_encode($data);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
-        curl_setopt($ch, CURLOPT_POST, true);
+        ];
+        // @var string $dataString
+        $dataString = json_encode($data, JSON_THROW_ON_ERROR);
 
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curlSession, CURLOPT_URL, $url);
+        curl_setopt($curlSession, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($curlSession, CURLOPT_POSTFIELDS, $dataString);
+        curl_setopt($curlSession, CURLOPT_POST, true);
+
+        curl_setopt($curlSession, CURLOPT_RETURNTRANSFER, true);
         curl_setopt(
-            $ch,
+            $curlSession,
             CURLOPT_HTTPHEADER,
-            array(
+            [
                 'Content-Type: application/json',
-                'Content-Length: ' . strlen($data_string)
-            )
+                'Content-Length: ' . strlen($dataString)
+            ]
         );
-        $result = Curl\Util::execute($ch);
+
+        $result = curl_exec($curlSession);
+
+        $retry = 0;
+        while (curl_errno($curlSession) == 28 && $retry < 3) {
+            $result = curl_exec($curlSession);
+            $retry++;
+        }
 
         if (!\is_string($result)) {
             throw new RuntimeException('Loki API error. Description: No response');
         }
         $result = json_decode($result, true);
 
-        if ($result !== "" && $result !== null) {
-            throw new RuntimeException('Loki API error. Description: ' . $result);
+        if (is_scalar($result) && $result !== '') {
+            throw new RuntimeException('Loki API error. Description: ' . (string) $result);
         }
     }
 
-    /**
-     * @inheritDoc
-     */
     protected function getDefaultFormatter(): FormatterInterface
     {
         return new JsonFormatter(JsonFormatter::BATCH_MODE_JSON, false);
